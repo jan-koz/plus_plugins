@@ -20,6 +20,33 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import android.app.PendingIntent;
+import android.content.ComponentName;
+import android.content.BroadcastReceiver;
+import android.util.Log;
+import android.net.ConnectivityManager;
+import android.content.IntentFilter;
+
+
+ class MyReceiver extends BroadcastReceiver {
+
+  // @Override public void onReceive(Context context, Intent intent) {
+  //   ComponentName clickedComponent = intent.getParcelableExtra(intent.EXTRA_CHOSEN_COMPONENT);
+    
+  // }
+
+
+  @Override
+  public void onReceive(Context context, Intent intent) {
+      //super.onReceive(context, intent);
+      String selectedAppPackage = String.valueOf(intent.getExtras().get(intent.EXTRA_CHOSEN_COMPONENT));
+      ComponentName clickedComponent = intent.getParcelableExtra(intent.EXTRA_CHOSEN_COMPONENT);
+      System.out.println("selectedAppPackage");
+      Log.d("selected app",selectedAppPackage);
+      // do something here
+  }
+}
+
 
 /** Handles share intent. */
 class Share {
@@ -51,17 +78,27 @@ class Share {
 
   void share(String text, String subject) {
     if (text == null || text.isEmpty()) {
-      throw new IllegalArgumentException("Non-empty text expected");
+      throw new IllegalArgumentException("Non-empty text expected :(");
     }
+    BroadcastReceiver br = new MyReceiver();
+    IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+    filter.addAction(Intent.ACTION_SEND);
+    context.registerReceiver(br, filter);
 
-    Intent shareIntent = new Intent();
-    shareIntent.setAction(Intent.ACTION_SEND);
+    Intent shareIntent = new Intent(Intent.ACTION_SEND);
     shareIntent.putExtra(Intent.EXTRA_TEXT, text);
     shareIntent.putExtra(Intent.EXTRA_SUBJECT, subject);
     shareIntent.setType("text/plain");
-    Intent chooserIntent = Intent.createChooser(shareIntent, null /* dialog title optional */);
-    startActivity(chooserIntent);
+    PendingIntent pi = PendingIntent.getBroadcast(this.context, 0,
+        new Intent(this.context, MyReceiver.class),
+        PendingIntent.FLAG_UPDATE_CURRENT);
+    shareIntent = Intent.createChooser(shareIntent, null, pi.getIntentSender());
+    //Intent chooserIntent = Intent.createChooser(shareIntent, null, pi.getIntentSender());
+    activity.startActivity(shareIntent);
+
   }
+
+
 
   void shareFiles(List<String> paths, List<String> mimeTypes, String text, String subject)
       throws IOException {
